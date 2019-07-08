@@ -1,18 +1,21 @@
 var express = require('express');
 var exphbs  = require('express-handlebars');
 var app = express();
-var os = require("os");
-var morgan  = require('morgan');
+var os = require('os');
+//var morgan  = require('morgan');
 var http = require('http');
 
 // Configuration
-var backendHost = process.env.BACKEND_HOST || "devops-demo-backend-internal";
-var backendPort = process.env.BACKEND_PORT || "9080";
+var backendHost = process.env.BACKEND_HOST || 'devops-demo-backend-internal';
+var backendPort = process.env.BACKEND_PORT || '9080';
 
 app.engine('handlebars', exphbs({defaultLayout: 'main'}));
+//app.engine('handlebars', exphbs());
 app.set('view engine', 'handlebars');
-app.use(express.static('static'));
-app.use(morgan('combined'));
+app.use("/css", express.static(__dirname + '/static/css'));
+app.use("/images", express.static(__dirname + '/static/images'));
+//app.use(express.static('static'));
+//app.use(morgan('combined'));
 
 var nodePropURL = 'http://' + backendHost + ':' + backendPort + '/demo/api/node/properties';
 var nodeArch, nodePlatform, nodeRelease, nodeHost;
