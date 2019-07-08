@@ -34,7 +34,7 @@ spec:
         - name: BACKEND_HOST
           value: "devops-demo-backend-internal"
         - name: BACKEND_PORT
-          value: 9080
+          value: "9080"
 ---
 apiVersion: extensions/v1beta1
 kind: Ingress
