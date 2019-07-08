@@ -6,8 +6,8 @@ var morgan  = require('morgan');
 var http = require('http');
 
 // Configuration
-var backendHost = process.env.BACKEND_HOST || devops-demo-backend-internal;
-var backendPort = process.env.BACKEND_PORT || 9080;
+var backendHost = process.env.BACKEND_HOST || "devops-demo-backend-internal";
+var backendPort = process.env.BACKEND_PORT || "9080";
 
 app.engine('handlebars', exphbs({defaultLayout: 'main'}));
 app.set('view engine', 'handlebars');
