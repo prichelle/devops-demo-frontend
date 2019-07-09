@@ -4,11 +4,14 @@ metadata:
   name: devops-demo-frontend-internal
   namespace: demo
 spec:
+  type: NodePort
   selector:
     app: devops-demo-frontend
   ports:
-  - port: 8080
-    targetPort: 8080
+    - name: http
+      nodePort: 30112
+      port: 8080
+      targetPort: 8080
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -35,17 +38,3 @@ spec:
           value: "devops-demo-backend-internal"
         - name: BACKEND_PORT
           value: "9080"
----
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
- name: devops-demo-frontend-external
- namespace: demo
-spec:
-  rules:
-  - http:
-      paths:
-      - path: /demo
-        backend:
-         serviceName: devops-demo-frontend-internal
-         servicePort: 8080
