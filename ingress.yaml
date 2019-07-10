@@ -1,0 +1,15 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  generation: 1
+  labels:
+    app: APP_NAME
+  name: APP_NAME
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          serviceName: SVC_NAME
+          servicePort: 9080
+        path: /demo

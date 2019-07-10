@@ -1,0 +1,152 @@
+def label = "mypod-${UUID.randomUUID().toString()}"
+
+//default imTagId this id will be added in the k8s name
+//the value corresponds to the tag id used to tag the image in the registry
+//current implementation is to use the commit id
+def imTagId = "001"
+
+//app name will be used to define the k8s name. Value will be set from the helm chart 
+def appName = "mysampleapp".toLowerCase()
+
+//docker registry
+def registryHost = "mycluster.icp:8500";
+
+//namespace where the deployemnt shoudl occurs.
+//namespace should be set when deploying the application
+def namespace = "dev"
+
+// ingress name will be set of the application name ?
+def ingressName = "mysampleapp".toLowerCase()
+
+podTemplate(label: label, cloud: 'ICP', containers: [
+  containerTemplate(name: 'docker' , image: 'docker:18.06.2-ce', ttyEnabled: true, command: 'cat'),
+  containerTemplate(name: 'kubectl', image: 'lachlanevenson/k8s-kubectl', command: 'cat', ttyEnabled: true),
+  containerTemplate(name: 'helm', image: 'lachlanevenson/k8s-helm:v2.12.3', command: 'cat', ttyEnabled: true)
+], 
+volumes: [ secretVolume( mountPath: '/home/jenkins/.helm' , secretName: 'helmcert'),
+           hostPathVolume(hostPath: '/var/run/docker.sock', mountPath: '/var/run/docker.sock')
+]) {
+    node(label) {
+        checkout scm
+        try{
+            stage ('initialize'){
+                appName = sh (
+                                    script: "cat ./helm/Chart.yaml | grep name | awk '{print \$2}'",
+                                    returnStdout: true
+                                ).trim()
+
+                echo "deploying app: ${appName}" 
+
+                imTagId = input(
+                    id: 'userInput', message: "deploying app ${appName} in namespace ${namespace}", parameters: [
+                        //[$class: 'TextParameterDefinition', defaultValue: '0.4.1', description: 'Image tag to be used', name: 'tag']
+                        string(defaultValue: '0.4.1',
+                                            description: 'Image tag to be used',
+                                            name: 'tag')
+                    ]
+                )
+                //imTagId = userInput
+                echo "image tag id: ${imTagId}"
+
+            }
+        }  catch(exe)
+        {
+            echo "${exe}"
+            error("[FAILURE] Failed to initialize")
+        }
+        try{
+            publish( imTagId,  appName,  namespace,  registryHost)
+        }catch(exe) {
+            echo "${exe}"
+            error("[FAILURE] Failed to publish,")          
+        }
+        try{
+            deployincluster(registryHost, namespace, appName, imTagId)
+        } catch(exe) {
+            echo "${exe}"
+            error("[FAILURE] Failed to deploy")
+           
+        }
+        stage ('test'){
+            def testDone
+            script {
+                testDone = input message: 'is test ok',
+                    parameters: [choice(name: 'testing', choices: 'no\nyes', description: "Choose yes if the application tests have been successful")]
+            }
+            if (testDone){
+                echo "send positive notification to slack"
+            }else{
+
+                echo "send negative notification to slack"
+            }
+                    
+        }
+   }
+}
+
+def publish(String imTagId, String appName, String namespace, String registryHost) {
+     
+     container('docker'){
+        def docimg
+        stage ('Build') {
+                echo 'Running build automation'
+                imageName = registryHost + "/" + namespace + "/" + appName + ":" + imTagId
+                echo "building ${imageName}"
+                docimg = docker.build(imageName)
+                sh "docker images"
+                //docimg = docker.image(imageName)
+        } 
+
+        stage ('publish') {
+            echo 'Loading built image into registry'
+            
+            script {
+                docker.withRegistry("http://" + registryHost, 'docker-registry') {
+                    docimg.push()
+                }
+            }
+        }
+    }
+}
+
+def deployincluster(String registryHost, String namespace, String appName, String imTagId){
+    
+    stage ('deploy'){
+
+        //echo "getting the current service name"
+        //kubectl get ingress -n labs helloapp -o jsonpath="{.spec.rules[*].http.paths[*].backend.serviceName}"
+        echo 'deploying using helm'
+        echo "setting image name to ${registryHost}/${namespace}/${appName}" 
+        sh "sed -i 's|IM_URI|${registryHost}/${namespace}/${appName}|g' ./helm/values.yaml" 
+
+        echo "setting image tag to ${imTagId}"
+        sh "sed -i 's|IM_TAG|${imTagId}|g' ./helm/values.yaml"
+
+        echo "setting app for DEV" 
+        //TODO adapt based on info
+        sh "sed -i 's|APP_COLOR|GREEN|g' ./helm/values.yaml"
+        // sh "sed -i back 's|APP_PORT|${appPort}|g' ./helm/values.yaml"
+        container ('kubectl'){
+            echo "check that namespace exists"
+            currentNsName = sh (
+                        script: "kubectl get ns | grep ${namespace} | awk '{print \$1}'",
+                        returnStdout: true
+                    ).trim()
+            if (currentNsName == null){
+                echo "creating namespace ${namespace}"
+                sh "kubectl create ns ${namespace}"
+                sh "kubectl create rolebinding -n ${namespace} --clusterrole=ibm-anyuid-clusterrole --group=system:serviceaccounts:${namespace} ibm-anyuid-clusterrole-rolebinding"
+            }
+        }
+        
+        container('helm'){
+            sh "cat ./helm/values.yaml"
+            def cleanTag = imTagId.replaceAll('\\.','')
+            echo "installing application with helm: ${appName}-${cleanTag} in namespace ${namespace}"
+            sh "helm install --name=${appName}-${cleanTag} --namespace=${namespace} --tls ./helm"
+            sh "helm list --tls | grep ${appName}"
+            // kubectl get svc -n labs --show-labels | grep GREEN | awk '{print $1}'
+            // helm install --namespace=labs . --name myapp-562271c
+        }
+    }
+}
