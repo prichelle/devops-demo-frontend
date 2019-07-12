@@ -14,7 +14,16 @@
     <div class="content">
          {{{body}}}
     </div>
+    <form action="/check" method="POST">
+        <input type="text" name="user" placeholder="Your user name" />
+        <input type="password" name="password" placeholder="Your password" />
+        <input type="submit" value="Check" />
+    </form>
+    <div class="content">
+        Status:&nbsp{{user}}&nbsp{{checkStatus}}
+    </div>
   </div>
+
 
 </body>
 

@@ -1,9 +1,13 @@
 var express = require('express');
+var bodyParser = require("body-parser");
 var exphbs  = require('express-handlebars');
 var app = express();
 var os = require('os');
 //var morgan  = require('morgan');
 var http = require('http');
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
 // Configuration
 var backendHost = process.env.BACKEND_HOST || 'localhost';
@@ -21,6 +25,10 @@ var nodePropURL = 'http://' + backendHost + ':' + backendPort + '/demo/api/node/
 var nodeArch, nodePlatform, nodeRelease, nodeHost;
 var podPropURL = 'http://' + backendHost + ':' + backendPort + '/demo/api/pod/properties';
 var podName, podNamespace, podIP, podVersion, podEnv;
+
+// new vars in release v1.0
+var userCheckURL = 'http://' + backendHost + ':' + backendPort + '/demo/api/user/check';
+var user, checkStatus;
        
 app.get('/demo', function (req, res) {
 
@@ -67,9 +75,35 @@ app.get('/demo', function (req, res) {
       nodeArch: nodeArch || 'unknown',
       nodePlatform: nodePlatform || 'unknown',
       nodeRelease: nodeRelease || 'unknown',
-      nodeHost: nodeHost || 'unknown'
+      nodeHost: nodeHost || 'unknown',
+      user: user || '',
+      checkStatus: checkStatus || 'unknown'
     });
 });
+
+// new function in release v1.0
+
+app.post('/check', function (req, res) {
+  var userName=req.body.user;
+  var password=req.body.password;
+  console.log('User name = ' + userName + ' password is ' + password);
+  
+  http.get(userCheckURL + '?username=' + userName + '&password=' + password, function(res){
+    var body = '';
+    res.on('data', function(chunk){
+        body += chunk;
+    });
+    res.on('end', function(){
+        var jsonRes = JSON.parse(body);
+        user = jsonRes['username'];
+        checkStatus = jsonRes['status'];
+    });
+    }).on('error', function(e){
+      console.log("Got an error: ", e);
+    });
+
+    res.redirect('/demo');
+  });
 
 // Set up listener
 app.listen(8080, function () {
