@@ -1,0 +1,11 @@
+# Common load
+watch -n 1 curl -o /dev/null -s -w %{http_code} http://10.194.119.16:30222/demo
+
+# Simulate error with delay
+
+# normal request
+curl -d "user=test&password=123" -X POST http://10.194.119.16:30222/check
+
+# request with error
+curl -d "user=&password=" -X POST http://10.194.119.16:30222/check
+
