@@ -60,5 +60,5 @@ spec:
     app: devops-demo-backend
   ports:
     - name: http
-      nodePort: 30111
       port: 9080
+      targetPort: 9080
