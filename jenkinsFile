@@ -4,6 +4,7 @@ def label = "mypod-${UUID.randomUUID().toString()}"
 //the value corresponds to the tag id used to tag the image in the registry
 //current implementation is to use the commit id
 def imTagId = "001"
+def imNs = "demo"
 
 //app name will be used to define the k8s name. Value will be set from the helm chart 
 def appName = "mysampleapp".toLowerCase()
@@ -13,10 +14,9 @@ def registryHost = "mycluster.icp:8500";
 
 //namespace where the deployemnt shoudl occurs.
 //namespace should be set when deploying the application
-def namespace = "dev"
+def namespace = "demoapp-dev"
 
-// ingress name will be set of the application name ?
-def ingressName = "mysampleapp".toLowerCase()
+//def namespace = "dev"
 
 podTemplate(label: label, cloud: 'ICP', containers: [
   containerTemplate(name: 'docker' , image: 'docker:18.06.2-ce', ttyEnabled: true, command: 'cat'),
@@ -37,16 +37,19 @@ volumes: [ secretVolume( mountPath: '/home/jenkins/.helm' , secretName: 'helmcer
 
                 echo "deploying app: ${appName}" 
 
-                imTagId = input(
-                    id: 'userInput', message: "deploying app ${appName} in namespace ${namespace}", parameters: [
-                        //[$class: 'TextParameterDefinition', defaultValue: '0.4.1', description: 'Image tag to be used', name: 'tag']
-                        string(defaultValue: '0.4.1',
-                                            description: 'Image tag to be used',
-                                            name: 'tag')
+                def userInput = input(
+                    id: 'userInput', message: "deploying app ${appName}", parameters: [
+                    [$class: 'TextParameterDefinition', defaultValue: 'demo', description: 'image namespace', name: 'imagens'],
+                    [$class: 'TextParameterDefinition', defaultValue: '0.4.1', description: 'Image tag', name: 'tag'],
+                    [$class: 'TextParameterDefinition', defaultValue: 'demoapp-dev', description: 'namespace to deploy', name: 'namespace']
                     ]
                 )
-                //imTagId = userInput
-                echo "image tag id: ${imTagId}"
+
+                namespace = userInput['namespace']
+                imTagId = userInput['tag']
+                imNs = userInput['imagens']
+
+                echo "image tag id: ${imTagId} and ns: ${imNs} will be deployed in ns: ${namespace}"
 
             }
         }  catch(exe)
@@ -55,13 +58,14 @@ volumes: [ secretVolume( mountPath: '/home/jenkins/.helm' , secretName: 'helmcer
             error("[FAILURE] Failed to initialize")
         }
         try{
-            publish( imTagId,  appName,  namespace,  registryHost)
+            publish( imNs, imTagId,  appName,  namespace,  registryHost)
         }catch(exe) {
             echo "${exe}"
             error("[FAILURE] Failed to publish,")          
         }
         try{
-            deployincluster(registryHost, namespace, appName, imTagId)
+            deployincluster(registryHost, namespace, appName, imTagId, imNs)
+            updateSVC(namespace,  imTagId, appName)
         } catch(exe) {
             echo "${exe}"
             error("[FAILURE] Failed to deploy")
@@ -75,22 +79,23 @@ volumes: [ secretVolume( mountPath: '/home/jenkins/.helm' , secretName: 'helmcer
             }
             if (testDone){
                 echo "send positive notification to slack"
+                slackSend(channel: "pyk8sr-release-alerts", message: "application ${imNs}/${appName} with tag ${imTagId} is available for deployment", sendAsText: true)
             }else{
 
                 echo "send negative notification to slack"
             }
-                    
+            // TOPDO sent slack notification     
         }
    }
 }
 
-def publish(String imTagId, String appName, String namespace, String registryHost) {
+def publish(String imNs, String imTagId, String appName, String namespace, String registryHost) {
      
-     container('docker'){
+    container('docker'){
         def docimg
         stage ('Build') {
                 echo 'Running build automation'
-                imageName = registryHost + "/" + namespace + "/" + appName + ":" + imTagId
+                imageName = registryHost + "/" + imNs + "/" + appName + ":" + imTagId
                 echo "building ${imageName}"
                 docimg = docker.build(imageName)
                 sh "docker images"
@@ -109,44 +114,84 @@ def publish(String imTagId, String appName, String namespace, String registryHos
     }
 }
 
-def deployincluster(String registryHost, String namespace, String appName, String imTagId){
+def deployincluster(String registryHost, String namespace, String appName, String imTagId, String imNS){
     
     stage ('deploy'){
 
         //echo "getting the current service name"
         //kubectl get ingress -n labs helloapp -o jsonpath="{.spec.rules[*].http.paths[*].backend.serviceName}"
         echo 'deploying using helm'
-        echo "setting image name to ${registryHost}/${namespace}/${appName}" 
-        sh "sed -i 's|IM_URI|${registryHost}/${namespace}/${appName}|g' ./helm/values.yaml" 
+        echo "setting image name to ${registryHost}/${imNS}/${appName}" 
+        sh "sed -i 's|IM_URI|${registryHost}/${imNS}/${appName}|g' ./helm/values.yaml" 
 
         echo "setting image tag to ${imTagId}"
         sh "sed -i 's|IM_TAG|${imTagId}|g' ./helm/values.yaml"
 
         echo "setting app for DEV" 
         //TODO adapt based on info
-        sh "sed -i 's|APP_COLOR|GREEN|g' ./helm/values.yaml"
+        sh "sed -i 's|APP_COLOR|DEV|g' ./helm/values.yaml"
         // sh "sed -i back 's|APP_PORT|${appPort}|g' ./helm/values.yaml"
         container ('kubectl'){
             echo "check that namespace exists"
             currentNsName = sh (
-                        script: "kubectl get ns | grep ${namespace} | awk '{print \$1}'",
+                        script: "kubectl get ns | grep '^${namespace}' | awk '{print \$1}'",
                         returnStdout: true
                     ).trim()
-            if (currentNsName == null){
+            if (!currentNsName){
                 echo "creating namespace ${namespace}"
                 sh "kubectl create ns ${namespace}"
+                withCredentials([usernamePassword(credentialsId: 'docker-registry', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    sh "kubectl create secret docker-registry sa-registry --docker-server=mycluster.icp:8500 --docker-username=${USERNAME} --docker-password=${PASSWORD} -n ${namespace}"
+                }
                 sh "kubectl create rolebinding -n ${namespace} --clusterrole=ibm-anyuid-clusterrole --group=system:serviceaccounts:${namespace} ibm-anyuid-clusterrole-rolebinding"
             }
+            echo "checking backend-end is available"
+            def frontendSvc = sh (
+                            script: "kubectl get svc devops-demo-backend-internal -n ${namespace} | awk '{print \$1}'",
+                            returnStdout: true
+                        ).trim()
+            if (!frontendSvc) {
+                sh "kubectl apply -f ./k8s/backend-deploy.yaml --namespace ${namespace}"
+            }
+
         }
         
         container('helm'){
             sh "cat ./helm/values.yaml"
             def cleanTag = imTagId.replaceAll('\\.','')
-            echo "installing application with helm: ${appName}-${cleanTag} in namespace ${namespace}"
-            sh "helm install --name=${appName}-${cleanTag} --namespace=${namespace} --tls ./helm"
+            echo "installing application with helm: ${appName}-${cleanTag}-${namespace} in namespace ${namespace}"
+            sh "helm install --name=${appName}-${cleanTag}-${namespace} --namespace=${namespace} --tls ./helm"
             sh "helm list --tls | grep ${appName}"
-            // kubectl get svc -n labs --show-labels | grep GREEN | awk '{print $1}'
-            // helm install --namespace=labs . --name myapp-562271c
+        }
+    }
+}
+
+def updateSVC(String namespace, String imTagId, String appName){
+
+    stage ('updateSVC'){
+
+        container ('kubectl') {
+            echo "initializing service yaml file"   
+
+            // updating svc
+            echo "service in namespace ${namespace}: ${appName}-external will be updated for version ${imTagId}"
+
+            sh "sed -i 's|APP_NAME|${appName}|g' ./k8s/service.yaml"
+
+            sh "sed -i 's|APPSELECTOR|${appName}-${imTagId}|g' ./k8s/service.yaml"
+
+            sh "cat ./k8s/service.yaml"
+
+            sh "kubectl apply -f ./k8s/service.yaml -n ${namespace}"
+
+            echo "service ${appName}-internal updated"
+
+            def svcNodePort = sh (
+                            script: "kubectl get svc devops-demo-frontend-external -n ${namespace} -o jsonpath='{ .spec.ports[0].nodePort}'",
+                            returnStdout: true
+                        ).trim()
+           
+            echo "application will be available on port: ${svcNodePort}"         
         }
     }
 }
