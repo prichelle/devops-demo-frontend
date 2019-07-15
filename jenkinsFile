@@ -79,6 +79,7 @@ volumes: [ secretVolume( mountPath: '/home/jenkins/.helm' , secretName: 'helmcer
             }
             if (testDone){
                 echo "send positive notification to slack"
+                slackSend(channel: "pyk8sr-release-alerts", message: "application ${imNs}/${appName} with tag ${imTagId} is available for deployment", sendAsText: true)
             }else{
 
                 echo "send negative notification to slack"
