@@ -8,30 +8,31 @@ var http = require('http');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-
-// Configuration
-var backendHost = process.env.BACKEND_HOST || 'localhost';
-var backendPort = process.env.BACKEND_PORT || '9080';
-
 app.engine('handlebars', exphbs({defaultLayout: 'main'}));
-//app.engine('handlebars', exphbs());
 app.set('view engine', 'handlebars');
 app.use("/css", express.static(__dirname + '/static/css'));
 app.use("/images", express.static(__dirname + '/static/images'));
 //app.use(express.static('static'));
 //app.use(morgan('combined'));
 
+/*
 var nodePropURL = 'http://' + backendHost + ':' + backendPort + '/demo/api/node/properties';
 var nodeArch, nodePlatform, nodeRelease, nodeHost;
 var podPropURL = 'http://' + backendHost + ':' + backendPort + '/demo/api/pod/properties';
 var podName, podNamespace, podIP, podVersion, podEnv;
+*/
 
 // new vars in release v1.0
+// Backend service URL
+var backendHost = process.env.BACKEND_HOST || 'localhost';
+var backendPort = process.env.BACKEND_PORT || '9080';
+
 var userCheckURL = 'http://' + backendHost + ':' + backendPort + '/demo/api/user/v2/check';
 var user, checkStatus;
        
 app.get('/demo', function (req, res) {
-
+    
+  /*
      http.get(nodePropURL, function(res){
         var body = '';
         res.on('data', function(chunk){
@@ -65,17 +66,19 @@ app.get('/demo', function (req, res) {
     }).on('error', function(e){
           console.log("Got an error: ", e);
     });
-
+  */
+    
     res.render('home', {
-      podName: podName || 'unknown',
-      podNamespace: podNamespace || 'unknown',
-      podIP: podIP || 'unknown',
-      podVersion: podVersion || 'unknown',
-      podEnv: podEnv || 'unknown',
-      nodeArch: nodeArch || 'unknown',
-      nodePlatform: nodePlatform || 'unknown',
-      nodeRelease: nodeRelease || 'unknown',
-      nodeHost: nodeHost || 'unknown',
+      podName: process.env.POD_NAME || 'unknown',
+      podNamespace: process.env.POD_NAMESPACE || 'unknown',
+      podIP: process.env.POD_IP || 'unknown',
+      podVersion: process.env.POD_VERSION || 'unknown',
+      podEnv: process.env.POD_ENVIRONMENT || 'unknown',
+      nodeArch: os.arch(),
+      nodePlatform: os.type(),
+      nodeRelease: os.release(),
+      nodeHost: os.hostname(),
+      nodeUpTime: secToTime(os.uptime()),
       user: user || '',
       checkStatus: checkStatus || 'unknown'
     });
@@ -109,3 +112,13 @@ app.post('/check', function (req, res) {
 app.listen(8080, function () {
   console.log("Listening on: http://%s:%s", os.hostname(), 8080);
 });
+
+
+
+function secToTime(totalSeconds) {
+  hours = Math.floor(totalSeconds / 60 / 60);
+  totalSeconds %= 3600;
+  minutes = Math.floor(totalSeconds / 60);
+  seconds = totalSeconds % 60;
+  return ('0'+ hours).slice(-2) +'h:'+ ('0'+minutes).slice(-2) +'m:'+ ('0'+seconds).slice(-2) + 'sec' ;
+}
