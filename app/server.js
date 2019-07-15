@@ -27,7 +27,7 @@ var podPropURL = 'http://' + backendHost + ':' + backendPort + '/demo/api/pod/pr
 var podName, podNamespace, podIP, podVersion, podEnv;
 
 // new vars in release v1.0
-var userCheckURL = 'http://' + backendHost + ':' + backendPort + '/demo/api/user/check';
+var userCheckURL = 'http://' + backendHost + ':' + backendPort + '/demo/api/user/v2/check';
 var user, checkStatus;
        
 app.get('/demo', function (req, res) {

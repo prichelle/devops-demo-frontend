@@ -9,3 +9,11 @@ curl -d "user=test&password=123" -X POST http://10.194.119.16:30222/check
 # request with error
 curl -d "user=&password=" -X POST http://10.194.119.16:30222/check
 
+
+
+create alert for response time degradation
+
+to Oscar by Slack/email
+
+
+
