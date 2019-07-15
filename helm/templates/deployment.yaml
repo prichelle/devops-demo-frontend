@@ -9,19 +9,17 @@ spec:
   selector:
     matchLabels:
       name: {{ include "demo-app.name" . }}
-      instance-release: {{ .Release.Name }}
+      instance-release: "{{ .Chart.Name }}-{{ .Values.image.tag}}"
       color: {{ .Values.labels.appcolor}}
   template:
     metadata:
       labels:
         name: {{ include "demo-app.name" . }}
-        instance-release: {{ .Release.Name }}
+        instance-release: "{{ .Chart.Name }}-{{ .Values.image.tag}}"
         color: {{ .Values.labels.appcolor}}
     spec:
-    {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-    {{- end }}
+      - name: {{ .Values.image.imagePullSecrets}}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -41,18 +39,10 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
-          - name: POD_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.name
-          - name: POD_NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
-          - name: POD_IP
-            valueFrom:
-              fieldRef:
-                fieldPath: status.podIP
+          - name: BACKEND_HOST
+            value: "{{ .Values.backend.host }}"
+          - name: BACKEND_PORT
+            value: "{{ .Values.backend.port }}"          
           - name: POD_VERSION
             value: "{{ .Values.image.tag }}"
           - name: POD_ENVIRONMENT
