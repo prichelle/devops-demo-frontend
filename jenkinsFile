@@ -172,20 +172,20 @@ def updateSVC(String namespace, String imTagId, String appName){
         container ('kubectl') {
             echo "initializing service yaml file"   
 
-
+            // updating svc
             echo "service in namespace ${namespace}: ${appName}-external will be updated for version ${imTagId}"
 
-            sh "sed -i 's|APP_NAME|${appName}|g' service.yaml"
-
-            sh "cat service.yaml"
+            sh "sed -i 's|APP_NAME|${appName}|g' ./k8s/service.yaml"
 
             def cleanTag = imTagId.replaceAll('\\.','')
 
-            sh "sed -i 's|APPSELECTOR|${appName}-${imTagId}|g' service.yaml"
-            sh "kubectl apply -f service.yaml -n ${namespace}"
+            sh "sed -i 's|APPSELECTOR|${appName}-${imTagId}|g' ./k8s/service.yaml"
+
+            sh "cat ./k8s/service.yaml"
+
+            sh "kubectl apply -f ./k8s/service.yaml -n ${namespace}"
 
             echo "service ${appName}-internal updated"
-            //TODO remove previous deployment
 
             def svcNodePort = sh (
                             script: "kubectl get svc devops-demo-frontend-external -n ${namespace} -o jsonpath='{ .spec.ports[0].nodePort}'",
