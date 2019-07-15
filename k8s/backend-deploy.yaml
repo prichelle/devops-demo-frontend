@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
       - name: devops-demo-backend
-        image: mycluster.icp:8500/demo/devops-demo-backend:0.3
+        image: mycluster.icp:8500/demo/devops-demo-backend:latest
         ports:
         - containerPort: 9080
         env:
