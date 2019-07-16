@@ -31,7 +31,7 @@ spec:
       - name: sa-registry
       containers:
       - name: devops-demo-backend
-        image: mycluster.icp:8500/demo/devops-demo-backend:0.4
+        image: mycluster.icp:8500/demo/devops-demo-backend:1.0
         ports:
         - containerPort: 9080
         env:
