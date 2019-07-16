@@ -83,6 +83,7 @@ volumes: [ secretVolume( mountPath: '/home/jenkins/.helm' , secretName: 'helmcer
                 slackSend(
                     channel: "pyk8sr-release-alerts", 
                     message: "application ${imNs}/${appName} with tag ${imTagId} is available for deployment. \n To release \n https://10.194.119.16:8443/jenkins/job/prod-release-app/parambuild/?imageName=${imNs}/${appName}&imageTag=${imTagId}&envNamespace=appdemo-prod"
+                )
             }else{
 
                 echo "send negative notification to slack"
