@@ -21,7 +21,7 @@ app.use("/images", express.static(__dirname + '/static/images'));
 var backendHost = process.env.BACKEND_HOST || 'localhost';
 var backendPort = process.env.BACKEND_PORT || '9080';
 
-var userCheckURL = 'http://' + backendHost + ':' + backendPort + '/demo/api/user/v2/check';
+var userCheckURL = 'http://' + backendHost + ':' + backendPort + '/demo/api/user/v3/check';
 var checkStatus;
 
 // new function in release v1.0
