@@ -3,8 +3,7 @@ var bodyParser = require("body-parser");
 var exphbs  = require('express-handlebars');
 var app = express();
 var os = require('os');
-//var morgan  = require('morgan');
-var http = require('http');
+//var http = require('http');
 var request = require('sync-request');
 
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -13,26 +12,24 @@ app.engine('handlebars', exphbs({defaultLayout: 'main'}));
 app.set('view engine', 'handlebars');
 app.use("/css", express.static(__dirname + '/static/css'));
 app.use("/images", express.static(__dirname + '/static/images'));
-//app.use(express.static('static'));
-//app.use(morgan('combined'));
 
-// new vars in release v1.0
-// Backend service URL
+// Backend service invocation configuration
 var backendHost = process.env.BACKEND_HOST || 'localhost';
 var backendPort = process.env.BACKEND_PORT || '9080';
+var backendVersion = 'v2';
 
-var userCheckURL = 'http://' + backendHost + ':' + backendPort + '/demo/api/user/v2/check';
+var userCheckURL = 'http://' + backendHost + ':' + backendPort + '/demo/api/user/' + backendVersion + '/check';
 var checkStatus;
-
-// new function in release v1.0
 
 app.post('/check', function (req, res) {
   var userName=req.body.user;
   var password=req.body.password;
-  //console.log('User name = ' + userName + ' password is ' + password);
+  // synchronous invocation of backend service
   var response = request('GET', userCheckURL + '?username=' + userName + '&password=' + password);
   var jsonRes = JSON.parse(response.getBody('utf8'));
   checkStatus = jsonRes['status'];
+  
+  // this is asynchronous invocation. for the demo purposes it swapped to synchronous - see above.
   /*
   http.get(userCheckURL + '?username=' + userName + '&password=' + password, function(res){
       var body = '';
@@ -48,12 +45,14 @@ app.post('/check', function (req, res) {
       console.log("Got an error: ", e);
   });
   */
-    //console.log('Check status: ' + checkStatus);
-    res.redirect('/demo');
+    
+  console.log('Check status for user: ' + userName + ' status: ' + checkStatus);
+  res.redirect('/demo');
 });
        
 app.get('/demo', function (req, res) {
     res.render('home', {
+      backendVersion: backendVersion || '',
       podName: process.env.POD_NAME || 'unknown',
       podNamespace: process.env.POD_NAMESPACE || 'unknown',
       podIP: process.env.POD_IP || 'unknown',
