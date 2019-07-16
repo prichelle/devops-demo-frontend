@@ -11,6 +11,7 @@
     "bytes": "^2.5.0",
     "express": "^4.15.2",
     "express-handlebars": "^3.0.0",
-    "morgan": "^1.8.2"
+    "morgan": "^1.8.2",
+    "sync-request": "^6.1.0"
   }
 }
