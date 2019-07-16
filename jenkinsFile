@@ -58,14 +58,14 @@ volumes: [ secretVolume( mountPath: '/home/jenkins/.helm' , secretName: 'helmcer
             error("[FAILURE] Failed to initialize")
         }
         try{
-            publish( imNs, imTagId,  appName,  namespace,  registryHost)
+            //publish( imNs, imTagId,  appName,  namespace,  registryHost)
         }catch(exe) {
             echo "${exe}"
             error("[FAILURE] Failed to publish,")          
         }
         try{
-            deployincluster(registryHost, namespace, appName, imTagId, imNs)
-            updateSVC(namespace,  imTagId, appName)
+            //deployincluster(registryHost, namespace, appName, imTagId, imNs)
+            //updateSVC(namespace,  imTagId, appName)
         } catch(exe) {
             echo "${exe}"
             error("[FAILURE] Failed to deploy")
