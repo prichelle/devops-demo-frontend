@@ -26,6 +26,8 @@ spec:
       labels:
         app: devops-demo-frontend
     spec:
+      imagePullSecrets:
+      - name: sa-registry
       containers:
       - name: devops-demo-frontend
         image: mycluster.icp:8500/demo/devops-demo-frontend:0.1
