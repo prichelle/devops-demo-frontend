@@ -195,7 +195,7 @@ def updateSVC(String namespace, String imTagId, String appName){
                             returnStdout: true
                         ).trim()
            
-            echo "application will be available on port: ${svcNodePort}"         
+            echo "application will be available on port: ${svcNodePort} - link: http://10.194.119.16:${svcNodePort}/demo"         
         }
     }
 }
