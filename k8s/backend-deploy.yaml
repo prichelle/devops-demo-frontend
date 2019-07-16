@@ -31,7 +31,7 @@ spec:
       - name: sa-registry
       containers:
       - name: devops-demo-backend
-        image: mycluster.icp:8500/demo/devops-demo-backend:0.1
+        image: mycluster.icp:8500/demo/devops-demo-backend:0.1.1
         ports:
         - containerPort: 9080
         env:
@@ -48,7 +48,7 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         - name: POD_VERSION
-          value: "0.1"
+          value: "0.1.1"
         - name: POD_ENVIRONMENT
           value: "GREEN"
 ---

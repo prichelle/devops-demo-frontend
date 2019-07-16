@@ -71,7 +71,7 @@ volumes: [ secretVolume( mountPath: '/home/jenkins/.helm' , secretName: 'helmcer
             error("[FAILURE] Failed to deploy")
            
         }
-        stage ('test'){
+        stage ('testing'){
             def testDone
             script {
                 testDone = input message: 'is test ok',
@@ -82,11 +82,11 @@ volumes: [ secretVolume( mountPath: '/home/jenkins/.helm' , secretName: 'helmcer
                 //slackSend(channel: "pyk8sr-release-alerts", message: "application ${imNs}/${appName} with tag ${imTagId} is available for deployment", sendAsText: true)
                 slackSend(
                     channel: "pyk8sr-release-alerts", 
-                    message: "application ${imNs}/${appName} with tag ${imTagId} is available for deployment. \n To release \n https://10.194.119.16:8443/jenkins/job/prod-release-app/parambuild/?imageName=${imNs}/${appName}&imageTag=${imTagId}&envNamespace=appdemo-prod"
+                    message: "application ${imNs}/${appName} with tag ${imTagId} is available for deployment. \n To release \n https://10.194.119.16:8443/jenkins/job/prod-release-app/parambuild/?imageName=${imNs}/${appName}&imageTag=${imTagId}&envNamespace=demoapp-prod"
                 )
             }else{
 
-                echo "send negative notification to slack"
+                echo "no slack release publication"
             }
             // TOPDO sent slack notification     
         }
@@ -102,7 +102,7 @@ def publish(String imNs, String imTagId, String appName, String namespace, Strin
                 imageName = registryHost + "/" + imNs + "/" + appName + ":" + imTagId
                 echo "building ${imageName}"
                 docimg = docker.build(imageName)
-                sh "docker images"
+                // sh "docker images"
                 //docimg = docker.image(imageName)
         } 
 
